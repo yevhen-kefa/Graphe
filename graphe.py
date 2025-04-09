@@ -122,6 +122,200 @@ def accepte (auto, m):
     else:
         return False
 # ===========================================================================================================================================
+# Exo 2
+
+def deterministe(automate):
+    transitions = automate["transitions"]
+    transitions_vue = set()
+    for transition in transitions:
+        origine = transition[0]
+        lettre = transition[1]
+        if (origine, lettre) in transitions_vue:
+            return False
+        transitions_vue.add((origine, lettre))
+    return True
+
+def fusionner_etats(etats):
+    return tuple(sorted(set(etats)))
+
+def etats_atteignables(etats, lettre, transitions):
+    result = set()
+    for etat in etats:
+        for transition in transitions:
+            if transition[0] == etat and transition[1] == lettre:
+                result.add(transition[2])
+    return fusionner_etats(result)
+
+def deterministe(automate):
+    transitions = automate["transitions"]
+    seen_transitions = set()
+    for transition in transitions:
+        origine = transition[0]
+        lettre = transition[1]
+        if (origine, lettre) in seen_transitions:
+            return False
+        seen_transitions.add((origine, lettre))
+    return True
+
+def determinise(automate):
+    if deterministe(automate):
+        return automate
+
+    alphabet = automate["alphabet"]
+    transitions = automate["transitions"]
+    I = automate["I"]
+    F = automate["F"]
+
+    etats_determinises = []
+    transitions_determinises = []
+    etats_a_explorer = [fusionner_etats(I)]
+
+    etats_determinises.append(fusionner_etats(I))
+
+    while etats_a_explorer:
+        etat_courant = etats_a_explorer.pop(0)
+        for lettre in alphabet:
+            etats_destinations = etats_atteignables(etat_courant, lettre, transitions)
+            if etats_destinations and etats_destinations not in etats_determinises:
+                etats_determinises.append(etats_destinations)
+                etats_a_explorer.append(etats_destinations)
+            if etats_destinations:
+                transitions_determinises.append([list(etat_courant), lettre, list(etats_destinations)])
+
+
+    F_determinise = []
+    for etat in etats_determinises:
+        if any(sous_etat in F for sous_etat in etat):
+            F_determinise.append(list(etat))
+
+    etats_determinises = [list(etat) for etat in etats_determinises]
+    I_determinise = [list(fusionner_etats(I))]
+
+    automate_determinise = {
+        "alphabet": alphabet,
+        "etats": etats_determinises,
+        "transitions": transitions_determinises,
+        "I": I_determinise,
+        "F": F_determinise
+    }
+
+    return automate_determinise
+
+
+def remplacer_etat(etats, ancien, nouveau):
+    return [nouveau if etat == ancien else etat for etat in etats]
+
+def remplacer_etat_transitions(transitions, ancien, nouveau):
+    nouvelles_transitions = []
+    for transition in transitions:
+        origine, lettre, destination = transition
+        if origine == ancien:
+            origine = nouveau
+        if destination == ancien:
+            destination = nouveau
+        nouvelles_transitions.append([origine, lettre, destination])
+    return nouvelles_transitions
+
+
+def renommage(automate):
+    alphabet = automate["alphabet"]
+    etats = automate["etats"]
+    transitions = automate["transitions"]
+    I = automate["I"]
+    F = automate["F"]
+
+
+    etat_mapping = {tuple(etat): i for i, etat in enumerate(etats)}
+
+
+    nouveaux_etats = list(etat_mapping.values())
+
+
+    nouvelles_transitions = []
+    for transition in transitions:
+        origine = tuple(transition[0])
+        lettre = transition[1]
+        destination = tuple(transition[2])
+        nouvelles_transitions.append([etat_mapping[origine], lettre, etat_mapping[destination]])
+
+
+    nouveaux_I = [etat_mapping[tuple(I[0])]]
+    nouveaux_F = [etat_mapping[tuple(f)] for f in F]
+
+    automate_renomme = {
+        "alphabet": alphabet,
+        "etats": nouveaux_etats,
+        "transitions": nouvelles_transitions,
+        "I": nouveaux_I,
+        "F": nouveaux_F
+    }
+
+    return automate_renomme
+
+
+#-------------------Complémentation---------------------
+
+def complet(automate):
+    alphabet = automate["alphabet"]
+    etats = automate["etats"]
+    transitions = automate["transitions"]
+
+    transition_dict = {(etat, lettre): False for etat in etats for lettre in alphabet}
+
+    for transition in transitions:
+        origine, lettre, _ = transition
+        transition_dict[(origine, lettre)] = True
+
+    for key in transition_dict:
+        if not transition_dict[key]:
+            return False
+
+    return True
+
+
+def complete(automate):
+    alphabet = automate["alphabet"]
+    etats = automate["etats"]
+    transitions = automate["transitions"]
+
+    transition_dict = {(etat, lettre): False for etat in etats for lettre in alphabet}
+
+    for transition in transitions:
+        origine, lettre, _ = transition
+        transition_dict[(origine, lettre)] = True
+
+
+    puits = max(etats) + 1
+    etats.append(puits)
+
+
+    for etat in etats:
+        for lettre in alphabet:
+            if not transition_dict.get((etat, lettre), False):
+                if [etat, lettre, puits] not in transitions:
+                    transitions.append([etat, lettre, puits])
+
+    for lettre in alphabet:
+        if [puits, lettre, puits] not in transitions:
+            transitions.append([puits, lettre, puits])
+
+    return {
+        "alphabet": alphabet,
+        "etats": etats,
+        "transitions": transitions,
+        "I": automate["I"],
+        "F": automate["F"]
+    }
+
+
+def complement(auto):
+    auto_complet = complete(renommage(determinise(auto)))
+    etats_finaux = set(auto_complet["F"])
+    etats_non_finaux = set(auto_complet["etats"]) - etats_finaux
+
+    auto_complet["F"] = list(etats_non_finaux)
+
+    return auto_complet
 
 
 
@@ -136,7 +330,85 @@ if __name__ == "__main__":
         "I": [0],
         "F": [2]
     }
-    
+    auto0 = {
+        "alphabet": ['a', 'b'],
+        "etats": [0, 1, 2, 3],
+        "transitions": [[0, 'a', 1], [1, 'a', 1], [1, 'b', 2], [2, 'a', 3]],
+        "I": [0],
+        "F": [3]
+    }
+
+    auto1 = {
+        "alphabet": ['a', 'b'],
+        "etats": [0, 1],
+        "transitions": [[0, 'a', 0], [0, 'b', 1], [1, 'b', 1], [1, 'a', 1]],
+        "I": [0],
+        "F": [1]
+    }
+
+    auto2 = {
+        "alphabet": ['a', 'b'],
+        "etats": [0, 1],
+        "transitions": [[0, 'a', 0], [0, 'a', 1], [1, 'b', 1], [1, 'a', 1]],
+        "I": [0],
+        "F": [1]
+    }
+
+    auto3 = {
+        "alphabet": ['a', 'b'],
+        "etats": [0, 1, 2],
+        "transitions": [[0, 'a', 1], [0, 'a', 0], [1, 'b', 2], [1, 'b', 1]],
+        "I": [0],
+        "F": [2]
+    }
+
+    auto4 ={
+        "alphabet":['a','b'],"etats": [0,1,2,],
+        "transitions":[[0,'a',1],[1,'b',2],[2,'b',2],[2,'a',2]], "I":[0],"F":[2]
+    }
+    auto5 ={
+        "alphabet":['a','b'],"etats": [0,1,2],
+        "transitions":[[0,'a',0],[0,'b',1],[1,'a',1],[1,'b',2],[2,'a',2],[2,'b',0]],
+        "I":[0],"F":[0,1]
+    }
+
+    auto6 ={
+        "alphabet":['a','b'],
+        "etats": [0,1,2,3,4,5],
+        "transitions": [
+            [0,'a',4],[0,'b',3],[1,'a',5],
+            [1,'b',5],[2,'a',5],[2,'b',2],
+            [3,'a',1],[3,'b',0],[4,'a',1],
+            [4,'b',2],[5,'a',2],[5,'b',5]
+        ],
+        "I":[0],
+        "F":[0,1,2,5]
+    }
+
+    autoexo3 = {
+        "alphabet": ['a', 'b'],
+        "etats": [1, 2, 3, 4, 5],
+        "transitions": [[1, 'a', 1], [1, 'a', 2], [2, 'b', 3], [2, 'a', 5], [5 , 'b', 5], [3, 'b', 3], [3, 'a', 4]],
+        "I": [1],
+        "F": [4, 5]
+    }
+
+
+    autoforprod1 = {
+        "alphabet": ['a', 'b'],
+        "etats": [0, 1, 2, 3],
+        "transition": [[0, 'b', 1], [0, 'a', 3], [1, 'a', 2], [1, 'b', 3], [2, 'a', 2], [2, 'b', 2]],
+        "I": [0],
+        "F": [2]
+    }
+
+    autoforprod2 = {
+        "alphabet": ['a', 'b'],
+        "etats": [4, 5, 6, 7],
+        "transition": [[4, 'a', 5], [4, 'b', 4], [5, 'a', 5], [5, 'b', 6], [2, 'a', 2], [2, 'b', 2]],
+        "I": [0],
+        "F": [2]
+    }
 
     # remplacer coucou pour obtenir une liste des suffixes et des préfixes du mot
     
@@ -211,3 +483,44 @@ if __name__ == "__main__":
     
     print("\nAccepte " + mot + " dans l'automate :")
     print(accepte(auto, mot))
+
+    print("------------------------------------------------------------")
+    print("2 Déterminisation.")
+    print("------------------------------------------------------------")
+    print('2.1')
+    print("============================================================")
+    
+    print(deterministe(auto0))  # True
+    print(deterministe(auto2))  # False
+    print('\n')
+
+    print('2.2')
+    print(determinise(auto2))
+    print(determinise(auto2))
+
+    print('2.3')
+    print(renommage(determinise(auto2)))
+    print('============================================================')
+
+    print ("\n\n")
+
+    print("------------------------------------------------------------")
+    print("3 Complétion.")
+    print("------------------------------------------------------------")
+    print('3.1')
+    print("============================================================")
+    print(complet(auto0))  # False
+    print(complet(auto1))  # True
+    print("============================================================")
+    print('\n')
+    print('3.2')
+    print("============================================================")
+    print(complete(auto0))
+    print("============================================================")
+    print('\n')
+    print('3.3')
+    print("============================================================")
+  
+    print(complement(auto3))
+    print('============================================================')
+    print ("\n\n")
