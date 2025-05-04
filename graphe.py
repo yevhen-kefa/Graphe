@@ -421,6 +421,112 @@ def miroirs(auto):
         auto_m["transitions"].append([e2, a, e1])
     return auto_m
 
+# ===========================================================================================================================================
+#-------------------Minimisation---------------------
+def minimise(auto):
+    """
+    Minimise un automate déterministe complet.
+    Retourne un automate équivalent avec moins d'états, dans le même format.
+    """
+    
+    alphabet = auto["alphabet"]
+    transitions = auto["transitions"]
+    tous_les_etats = auto["etats"]
+    etat_initial = auto["I"][0]
+    etats_finaux = auto["F"]
+
+    # D'abbord, j'élimine les états inaccessibles (qu'on ne peut jamais atteindre depuis l'état initial)
+    def etats_accessibles():
+        accessibles = []
+        a_faire = [etat_initial]
+        while a_faire:
+            courant = a_faire.pop()
+            if courant not in accessibles:
+                accessibles.append(courant)
+                for (source, lettre, cible) in transitions:
+                    if source == courant and cible not in accessibles:
+                        a_faire.append(cible)
+        return accessibles
+
+    accessibles = etats_accessibles()
+
+    # Ensuite on nettoie l'automate avec seulement les états et transitions utiles
+    transitions = [t for t in transitions if t[0] in accessibles and t[2] in accessibles]
+    etats_finaux = [f for f in etats_finaux if f in accessibles]
+    tous_les_etats = accessibles
+
+    # On Initialise les classes d'équivalence (partition)
+    # Séparation en 2 groupes pour la classe 0: finaux et non-finaux
+    partition = [etats_finaux, [e for e in tous_les_etats if e not in etats_finaux]]
+
+    def classe_de(etat, partitions):
+        """Renvoie la classe (groupe) à laquelle appartient un état"""
+        for groupe in partitions:
+            if etat in groupe:
+                return groupe
+        return None  # Normalement inutile
+
+    # Mettre à jour les classes jusqu'à stabilité
+    stable = False
+    while not stable:
+        stable = True
+        nouvelle_partition = []
+        for groupe in partition:
+            sous_groupes = {}  # liste d'états
+            for etat in groupe:
+                liste_etats = []
+                for lettre in alphabet:
+                    destination = None
+                    # On cherche où va cet état avec cette lettre
+                    for (source, l, cible) in transitions:
+                        if source == etat and l == lettre:
+                            destination = cible
+                            break
+                    # On regarde dans quelle classe va cette transition
+                    classe_dest = classe_de(destination, partition)
+                    liste_etats.append(tuple(classe_dest) if classe_dest else None)
+                liste_etats = tuple(liste_etats)
+                # On groupe selon la liste_etats
+                if liste_etats not in sous_groupes:
+                    sous_groupes[liste_etats] = []
+                sous_groupes[liste_etats].append(etat)
+            # Si on a découpé le groupe en plusieurs, on n’est plus stable
+            if len(sous_groupes) > 1:
+                stable = False
+            nouvelle_partition.extend(sous_groupes.values())
+        partition = nouvelle_partition
+
+    # Construction de l'automate minimal
+    etats_minimises = [groupe for groupe in partition]  # Chaque groupe devient un nouvel état
+    etats_initials_min = [g for g in etats_minimises if etat_initial in g]
+    etats_finaux_min = [g for g in etats_minimises if any(f in g for f in etats_finaux)]
+    transitions_minimales = []
+
+    # Pour chaque nouvel état (groupe), on définit ses transitions
+    for groupe in etats_minimises:
+        representant = groupe[0]  # On utilise un des états comme représentant
+        for lettre in alphabet:
+            destination = None
+            for (source, l, cible) in transitions:
+                if source == representant and l == lettre:
+                    destination = cible
+                    break
+            # On trouve dans quel groupe se trouve la destination
+            for g in etats_minimises:
+                if destination in g:
+                    transitions_minimales.append([groupe, lettre, g])
+                    break
+
+    return {
+        "alphabet": alphabet,
+        "etats": etats_minimises,
+        "I": etats_initials_min,
+        "transitions": transitions_minimales,
+        "F": etats_finaux_min
+    }
+
+
+
 
 if __name__ == "__main__":
     auto = {
@@ -639,3 +745,12 @@ if __name__ == "__main__":
     print(difference(auto4, auto5))
     print('============================================================')
     print(renommage(difference(auto4, auto5)))
+    print ("\n\n")
+
+    print("------------------------------------------------------------")
+    print("6 Minilisation.")
+    print("------------------------------------------------------------")
+    print('============================================================')
+    print(minimise(auto6))
+    print('============================================================')
+    print(renommage(minimise(auto6)))
