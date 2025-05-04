@@ -316,10 +316,110 @@ def complement(auto):
     auto_complet["F"] = list(etats_non_finaux)
 
     return auto_complet
+    
+# ===========================================================================================================================================
+#-------------------Automate Produit---------------------
 
+def inter(a1, a2):
+    alphabet = a1["alphabet"]
+    transitions = []
+    etats = []
+    I = [(a1["I"][0], a2["I"][0])]
+    F = []
 
+    visitee = set()
+    pile = list(I)
 
+    while pile:
+        (s1, s2) = pile.pop()
+        if (s1, s2) not in visitee:
+            visitee.add((s1, s2))
+            etats.append((s1, s2))
 
+            if s1 in a1["F"] and s2 in a2["F"]:
+                F.append((s1, s2))
+
+            for a in alphabet:
+                d1 = next((t[2] for t in a1["transitions"] if t[0] == s1 and t[1] == a), None)
+                d2 = next((t[2] for t in a2["transitions"] if t[0] == s2 and t[1] == a), None)
+                if d1 is not None and d2 is not None:
+                    transitions.append([(s1, s2), a, (d1, d2)])
+                    pile.append((d1, d2))
+
+    return {
+        "alphabet": alphabet,
+        "etats": etats,
+        "transitions": transitions,
+        "I": I,
+        "F": F
+    }
+
+def difference(auto1, auto2):
+    auto2c = complete(auto2)
+    alphabet = auto1["alphabet"]
+    transitions = []
+    etats = []
+    I = [(auto1["I"][0], auto2c["I"][0])]
+    F = []
+
+    visitee = set()
+    pile = list(I)
+
+    while pile:
+        (e1, e2) = pile.pop()
+        if (e1, e2) not in visitee:
+            visitee.add((e1, e2))
+            etats.append((e1, e2))
+            if e1 in auto1["F"] and e2 not in auto2c["F"]:
+                F.append((e1, e2))
+
+            for lettre in alphabet:
+                dest1 = [t[2] for t in auto1["transitions"] if t[0] == e1 and t[1] == lettre]
+                dest2 = [t[2] for t in auto2c["transitions"] if t[0] == e2 and t[1] == lettre]
+                if dest1 and dest2:
+                    transitions.append([(e1, e2), lettre, (dest1[0], dest2[0])])
+                    pile.append((dest1[0], dest2[0]))
+
+    return {
+        "alphabet": alphabet,
+        "etats": etats,
+        "transitions": transitions,
+        "I": I,
+        "F": F
+    }
+
+# ===========================================================================================================================================
+#-------------------Propriété de Fermeture---------------------
+
+def prefixe(auto):
+    auto_p = copy.deepcopy(auto)
+    auto_p["F"] = auto_p["etats"]  # Tous les états deviennent finaux
+    return auto_p
+
+def suffixe(auto):
+    auto_t = miroir(auto)  # Inverser l'automate
+    auto_t["F"] = auto_t["etats"]  # Tous les états sont finaux
+    auto_t = determinise(auto_t)
+    return miroir(auto_t)  # Refaire miroir
+
+def facteur(auto):
+    auto_t = miroir(auto)
+    auto_t["I"] = auto_t["etats"]  # Tous les états deviennent initiaux
+    auto_t["F"] = auto_t["etats"]  # Tous les états deviennent finaux
+    auto_t = determinise(auto_t)
+    return miroir(auto_t)
+
+def miroir(auto):
+    auto_m = {
+        "alphabet": auto["alphabet"],
+        "etats": auto["etats"],
+        "I": auto["F"],
+        "F": auto["I"],
+        "transitions": []
+    }
+    for (e1, a, e2) in auto["transitions"]:
+        auto_m["transitions"].append([e2, a, e1])
+    return auto_m
 
 
 if __name__ == "__main__":
@@ -524,3 +624,18 @@ if __name__ == "__main__":
     print(complement(auto3))
     print('============================================================')
     print ("\n\n")
+
+    print("------------------------------------------------------------")
+    print("4 Automate produit.")
+    print("------------------------------------------------------------")
+    print('4.1')
+    print('============================================================')
+    print(inter(auto4, auto5))
+    print('============================================================')
+    print(renommage(inter(auto4, auto5)))
+    print('============================================================')
+    print('\n')
+    print('4.2')
+    print(difference(auto4, auto5))
+    print('============================================================')
+    print(renommage(difference(auto4, auto5)))
