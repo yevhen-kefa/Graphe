@@ -388,38 +388,75 @@ def difference(auto1, auto2):
         "F": F
     }
 
+
+
+
+
 # ===========================================================================================================================================
 #-------------------Propriété de Fermeture---------------------
 
-def prefixe(auto):
-    auto_p = copy.deepcopy(auto)
-    auto_p["F"] = auto_p["etats"]  # Tous les états deviennent finaux
-    return auto_p
 
-def suffixe(auto):
-    auto_t = miroir(auto)  # Inverser l'automate
-    auto_t["F"] = auto_t["etats"]  # Tous les états sont finaux
-    auto_t = determinise(auto_t)
-    return miroir(auto_t)  # Refaire miroir
 
-def facteur(auto):
-    auto_t = miroir(auto)
-    auto_t["I"] = auto_t["etats"]  # Tous les états deviennent initiaux
-    auto_t["F"] = auto_t["etats"]  # Tous les états deviennent finaux
-    auto_t = determinise(auto_t)
-    return miroir(auto_t)
+#5  Propriétés de fermeture
+#5.1. Définir une fonction prefixe qui étant donné un automate émondé acceptant L renvoie
+#un automate acceptant l’ensemble des préfixes des mots de L.
+def accessibles(automate):
+        accessibles = set(automate['I'])
+        nouveaux = set(automate['I'])
 
-def miroirs(auto):
-    auto_m = {
-        "alphabet": auto["alphabet"],
-        "etats": auto["etats"],
-        "I": auto["F"],
-        "F": auto["I"],
-        "transitions": []
+        while nouveaux:
+            etat = nouveaux.pop()
+            for (src, symb, dest) in automate['transitions']:
+                if src == etat and dest not in accessibles:
+                    accessibles.add(dest)
+                    nouveaux.add(dest)
+
+        return accessibles
+def emonder(automate):
+    etats_accessibles = accessibles(automate)
+    transitions = [t for t in automate['transitions'] if t[0] in etats_accessibles and t[2] in etats_accessibles]
+    F = [f for f in automate['F'] if f in etats_accessibles]
+
+    return {
+        'alphabet': automate['alphabet'],
+        'etats': list(etats_accessibles),
+        'transitions': transitions,
+        'I': automate['I'],
+        'F': F
     }
-    for (e1, a, e2) in auto["transitions"]:
-        auto_m["transitions"].append([e2, a, e1])
-    return auto_m
+
+
+
+def prefixe(automate):
+    if not deterministe(automate):
+        automate = renommage(determinise(automate))
+    
+    automate = copy.deepcopy(automate)
+    automate['F'] = automate['etats']
+    return automate
+
+
+def suffixe(automate):
+    automate = copy.deepcopy(automate)
+    automate['I'] = automate['etats']
+    return automate
+
+
+def facteur(automate):
+    automate = copy.deepcopy(automate)
+    automate['I'] = automate['etats']
+    automate['F'] = automate['etats']
+    return automate
+
+
+def miror(automate):
+    auto = copy.deepcopy(automate)
+    auto['I'] = automate['F']
+    auto['F'] = automate['I']
+    auto['transitions'] = [[t[2], t[1], t[0]] for t in automate['transitions']]
+
+    return auto
+
 
 # ===========================================================================================================================================
 #-------------------Minimisation---------------------
@@ -746,6 +783,28 @@ if __name__ == "__main__":
     print('============================================================')
     print(renommage(difference(auto4, auto5)))
     print ("\n\n")
+
+    print("------------------------------------------------------------")
+    print("5 Propriétés de fermeture.")
+    print("------------------------------------------------------------")
+    print("============================================================")
+    print('5.1')
+    print("Foction prefixe :")
+    print(prefixe(autoexo3))
+    print("============================================================")
+    print("============================================================")
+    print('5.2')
+    print("Foction suffixe :")
+    print(suffixe(autoexo3))
+    print("============================================================")
+    print('5.3')
+    print("Foction facteur :")
+    print(facteur(autoexo3))
+    print("============================================================")
+    print('5.4')
+    print("Foction miroir :")
+    print(miror(autoexo3))
+    print("============================================================")
 
     print("------------------------------------------------------------")
     print("6 Minilisation.")
