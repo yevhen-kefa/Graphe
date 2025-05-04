@@ -409,7 +409,7 @@ def facteur(auto):
     auto_t = determinise(auto_t)
     return miroir(auto_t)
 
-def miroir(auto):
+def miroirs(auto):
     auto_m = {
         "alphabet": auto["alphabet"],
         "etats": auto["etats"],
