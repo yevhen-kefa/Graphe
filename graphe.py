@@ -422,7 +422,7 @@ def emonder(automate):
         'etats': list(etats_accessibles),
         'transitions': transitions,
         'I': automate['I'],
-        'F': F
+        'F': F8
     }
 
 
@@ -566,6 +566,39 @@ def minimise(auto):
 
 
 if __name__ == "__main__":
+    auto_det = {
+        "alphabet": ['a', 'b'],
+        "etats": [1, 2, 3, 4],
+        "transitions": [[1, 'a', 2], [1, 'a', 3], [1, 'b', 2], [2, 'b', 1], [2, 'a', 4], [4, 'a', 2], [4, 'b', 3], [3, 'b', 4]],
+        "I": [1, 4],
+        "F": [3, 4]
+    }
+
+    auto_inter1 = {
+        "alphabet": ['a', 'b'],
+        "etats": [0, 1],
+        "transitions": [[0, 'a', 0], [0, 'b', 1], [1, 'a', 1], [1, 'b', 0]],
+        "I": [0],
+        "F": [0]
+    }
+
+    auto_inter2 = {
+        "alphabet": ['a', 'b'],
+        "etats": [2, 3, 4],
+        "transitions": [[2, 'a', 3], [2, 'b', 2], [3, 'b', 3], [3, 'a', 4], [4, 'b', 4], [4, 'a', 2]],
+        "I": [2],
+        "F": [2]
+    }
+
+    auto_min = {
+        "alphabet": ['a', 'b'],
+        "etats": [2, 3, 4],
+        "transitions": [[1, 'b', 2], [1, 'a', 4], [2, 'b', 7], [2, 'a', 3], [4, 'b', 4], [4, 'a', 2]],
+        "I": [1],
+        "F": [1, 2, 4, 7]
+    }
+
+
     auto = {
         "alphabet": ['a', 'b'],
         "etats": [0, 1, 2],
@@ -733,16 +766,14 @@ if __name__ == "__main__":
     print('2.1')
     print("============================================================")
     
-    print(deterministe(auto0))  # True
-    print(deterministe(auto2))  # False
+    print(deterministe(auto_det))  # True
     print('\n')
 
     print('2.2')
-    print(determinise(auto2))
-    print(determinise(auto2))
+    print(determinise(auto_det))
 
     print('2.3')
-    print(renommage(determinise(auto2)))
+    print(renommage(determinise(auto_det)))
     print('============================================================')
 
     print ("\n\n")
